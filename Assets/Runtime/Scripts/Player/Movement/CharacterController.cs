@@ -7,6 +7,7 @@ public struct PlayerInputs {
     public float Right;
     public bool Jump;
     public bool Sprint;
+    public bool Crouch;
     
     public Quaternion CamRotation;
 }
@@ -17,6 +18,7 @@ public class CharacterController : MonoBehaviour, ICharacterController {
     [Space]
     [SerializeField] private float maxStableMovementSpeed = 10f;
     [SerializeField] private float maxStableSprintSpeed = 15f;
+    [SerializeField] private float maxStableCrouchSpeed = 5f;
     [SerializeField] private float stableMovementSharpness = 15f; 
     [SerializeField] private float orientationSharpness = 10f;
     
@@ -33,7 +35,7 @@ public class CharacterController : MonoBehaviour, ICharacterController {
     private int _timesJumped = 0;
     private bool _resetJumps;
     
-    private float _characterSpeed;
+    public float _characterSpeed;
 
     void Start() {
         motor.CharacterController = this;
@@ -43,10 +45,11 @@ public class CharacterController : MonoBehaviour, ICharacterController {
         if (_timesJumped >= _jumpLimit || motor.GroundingStatus.IsStableOnGround) _resetJumps = true;
         
         if ((inputs.Jump || _jumped) && (motor.GroundingStatus.IsStableOnGround || _timesJumped < _jumpLimit)) 
-            _jumped = true; 
+            _jumped = true;
 
-        if (inputs.Sprint) _characterSpeed = maxStableSprintSpeed;
-        else _characterSpeed = maxStableMovementSpeed;
+        if (inputs.Sprint || inputs.Crouch) {
+            _characterSpeed = inputs.Sprint ? maxStableSprintSpeed : maxStableCrouchSpeed; // prefer sprint over crouching for now, can change to sprint modifier later instead i.e if crouching && sprinting move faster than crouching but slower than walking
+        } else _characterSpeed = maxStableMovementSpeed;
 
         Vector3 moveInputVector = 
             Vector3.ClampMagnitude(new Vector3(inputs.Right, 0f, inputs.Forward), 1f);
