@@ -31,6 +31,9 @@ public class Player : MonoBehaviour {
         inputs.Right = Input.GetAxisRaw("Horizontal");
         inputs.Jump = Input.GetKeyDown(KeyCode.Space);
 
+        Debug.Log(Input.GetKeyDown(KeyCode.Space));
+        Debug.Log(inputs.Jump);
+
         inputs.CamRotation = playerCam.transform.rotation;
         characterController.SetInputs(ref inputs);
     }

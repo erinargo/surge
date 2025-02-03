@@ -18,6 +18,7 @@ public class CharacterController : MonoBehaviour, ICharacterController {
     [SerializeField] private float stableMovementSharpness = 15f; 
     [SerializeField] private float orientationSharpness = 10f;
     [SerializeField] private float jumpSpeed = 10f;
+    [SerializeField] private int _jumpLimit = 1;
 
     [Space] 
     // The one thing Sonic '06 Devs could never do
@@ -25,14 +26,20 @@ public class CharacterController : MonoBehaviour, ICharacterController {
 
     private Vector3 _moveInputVector, _lookInputVector;
     private bool _jumped;
+    private int _timesJumped = 0;
+    private bool _resetJumps;
 
     void Start() {
         motor.CharacterController = this;
     }
 
     public void SetInputs(ref PlayerInputs inputs) {
-        _jumped = inputs.Jump;
+        if (_timesJumped >= _jumpLimit || motor.GroundingStatus.IsStableOnGround) _resetJumps = true;
         
+        if ((inputs.Jump || _jumped) && (motor.GroundingStatus.IsStableOnGround || _timesJumped < _jumpLimit)) {
+            _jumped = true; // May be buggy, do testing
+        }
+
         Vector3 moveInputVector = 
             Vector3.ClampMagnitude(new Vector3(inputs.Right, 0f, inputs.Forward), 1f);
         Vector3 camPlanarDirection = 
@@ -78,11 +85,18 @@ public class CharacterController : MonoBehaviour, ICharacterController {
                     currentVelocity, 
                     targetMovementVelocity, 
                     1f - Mathf.Exp(-stableMovementSharpness * deltaTime));
+
+            if (_resetJumps) {
+                _timesJumped = 0;
+                _resetJumps = false;
+            }
         } else currentVelocity += gravity * deltaTime;
         
-        if (_jumped) { // Set Multijump Later
+        if (_jumped) {
             currentVelocity += (motor.CharacterUp * jumpSpeed) - Vector3.Project(currentVelocity, motor.CharacterUp);
             _jumped = false;
+            if (_timesJumped < _jumpLimit) _timesJumped++;
+            
             motor.ForceUnground();
         }
     }
