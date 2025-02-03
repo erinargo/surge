@@ -30,6 +30,7 @@ public class Player : MonoBehaviour {
         inputs.Forward = Input.GetAxisRaw("Vertical");
         inputs.Right = Input.GetAxisRaw("Horizontal");
         inputs.Jump = Input.GetKeyDown(KeyCode.Space);
+        inputs.Sprint = Input.GetKey(KeyCode.LeftShift);
 
         Debug.Log(Input.GetKeyDown(KeyCode.Space));
         Debug.Log(inputs.Jump);

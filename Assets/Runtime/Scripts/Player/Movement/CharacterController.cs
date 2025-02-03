@@ -6,17 +6,21 @@ public struct PlayerInputs {
     public float Forward;
     public float Right;
     public bool Jump;
+    public bool Sprint;
     
     public Quaternion CamRotation;
 }
 
 public class CharacterController : MonoBehaviour, ICharacterController {
     [SerializeField] private KinematicCharacterMotor motor;
-    
+
     [Space]
     [SerializeField] private float maxStableMovementSpeed = 10f;
+    [SerializeField] private float maxStableSprintSpeed = 15f;
     [SerializeField] private float stableMovementSharpness = 15f; 
     [SerializeField] private float orientationSharpness = 10f;
+    
+    [Space] 
     [SerializeField] private float jumpSpeed = 10f;
     [SerializeField] private int _jumpLimit = 1;
 
@@ -28,6 +32,8 @@ public class CharacterController : MonoBehaviour, ICharacterController {
     private bool _jumped;
     private int _timesJumped = 0;
     private bool _resetJumps;
+    
+    private float _characterSpeed;
 
     void Start() {
         motor.CharacterController = this;
@@ -36,9 +42,11 @@ public class CharacterController : MonoBehaviour, ICharacterController {
     public void SetInputs(ref PlayerInputs inputs) {
         if (_timesJumped >= _jumpLimit || motor.GroundingStatus.IsStableOnGround) _resetJumps = true;
         
-        if ((inputs.Jump || _jumped) && (motor.GroundingStatus.IsStableOnGround || _timesJumped < _jumpLimit)) {
-            _jumped = true; // May be buggy, do testing
-        }
+        if ((inputs.Jump || _jumped) && (motor.GroundingStatus.IsStableOnGround || _timesJumped < _jumpLimit)) 
+            _jumped = true; 
+
+        if (inputs.Sprint) _characterSpeed = maxStableSprintSpeed;
+        else _characterSpeed = maxStableMovementSpeed;
 
         Vector3 moveInputVector = 
             Vector3.ClampMagnitude(new Vector3(inputs.Right, 0f, inputs.Forward), 1f);
@@ -79,7 +87,7 @@ public class CharacterController : MonoBehaviour, ICharacterController {
             Vector3 inputRight = Vector3.Cross(_moveInputVector, motor.CharacterUp);
             Vector3 reorientedInput = Vector3.Cross(groundNormal, inputRight).normalized;
 
-            Vector3 targetMovementVelocity = reorientedInput * maxStableMovementSpeed; // adjust later for sprinting, char speeds
+            Vector3 targetMovementVelocity = reorientedInput * _characterSpeed;
             currentVelocity = 
                 Vector3.Lerp(
                     currentVelocity, 
