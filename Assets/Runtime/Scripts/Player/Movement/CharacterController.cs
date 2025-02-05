@@ -104,7 +104,16 @@ public class CharacterController : MonoBehaviour, ICharacterController {
         } else currentVelocity += gravity * deltaTime;
         
         if (_jumped) {
-            currentVelocity += (motor.CharacterUp * jumpSpeed) - Vector3.Project(currentVelocity, motor.CharacterUp);
+            Vector3 groundNormal = motor.GroundingStatus.GroundNormal;
+
+            Vector3 inputRight = Vector3.Cross(_moveInputVector, motor.CharacterUp);
+            Vector3 reorientedInput = Vector3.Cross(groundNormal, inputRight).normalized;
+
+            Vector3 targetMovementVelocity = reorientedInput * _characterSpeed;
+            Vector3 targetMovementDirection = (motor.CharacterUp * jumpSpeed) - Vector3.Project(currentVelocity, motor.CharacterUp) + targetMovementVelocity;
+            
+            currentVelocity = Vector3.Lerp(currentVelocity, targetMovementDirection, 1f - Mathf.Exp(-stableMovementSharpness * deltaTime));
+            
             _jumped = false;
             if (_timesJumped < _jumpLimit) _timesJumped++;
             
