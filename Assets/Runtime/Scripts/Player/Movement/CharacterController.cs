@@ -6,18 +6,25 @@ public struct PlayerInputs {
     public float Forward;
     public float Right;
     public bool Jump;
+    public bool Sprint;
+    public bool Crouch;
     
     public Quaternion CamRotation;
 }
 
 public class CharacterController : MonoBehaviour, ICharacterController {
     [SerializeField] private KinematicCharacterMotor motor;
-    
+
     [Space]
     [SerializeField] private float maxStableMovementSpeed = 10f;
+    [SerializeField] private float maxStableSprintSpeed = 15f;
+    [SerializeField] private float maxStableCrouchSpeed = 5f;
     [SerializeField] private float stableMovementSharpness = 15f; 
     [SerializeField] private float orientationSharpness = 10f;
+    
+    [Space] 
     [SerializeField] private float jumpSpeed = 10f;
+    [SerializeField] private int _jumpLimit = 1;
 
     [Space] 
     // The one thing Sonic '06 Devs could never do
@@ -25,14 +32,25 @@ public class CharacterController : MonoBehaviour, ICharacterController {
 
     private Vector3 _moveInputVector, _lookInputVector;
     private bool _jumped;
+    private int _timesJumped = 0;
+    private bool _resetJumps;
+    
+    public float _characterSpeed;
 
     void Start() {
         motor.CharacterController = this;
     }
 
     public void SetInputs(ref PlayerInputs inputs) {
-        _jumped = inputs.Jump;
+        if (_timesJumped >= _jumpLimit || motor.GroundingStatus.IsStableOnGround) _resetJumps = true;
         
+        if ((inputs.Jump || _jumped) && (motor.GroundingStatus.IsStableOnGround || _timesJumped < _jumpLimit)) 
+            _jumped = true;
+
+        if (inputs.Sprint || inputs.Crouch) {
+            _characterSpeed = inputs.Sprint ? maxStableSprintSpeed : maxStableCrouchSpeed; // prefer sprint over crouching for now, can change to sprint modifier later instead i.e if crouching && sprinting move faster than crouching but slower than walking
+        } else _characterSpeed = maxStableMovementSpeed;
+
         Vector3 moveInputVector = 
             Vector3.ClampMagnitude(new Vector3(inputs.Right, 0f, inputs.Forward), 1f);
         Vector3 camPlanarDirection = 
@@ -72,17 +90,33 @@ public class CharacterController : MonoBehaviour, ICharacterController {
             Vector3 inputRight = Vector3.Cross(_moveInputVector, motor.CharacterUp);
             Vector3 reorientedInput = Vector3.Cross(groundNormal, inputRight).normalized;
 
-            Vector3 targetMovementVelocity = reorientedInput * maxStableMovementSpeed; // adjust later for sprinting, char speeds
+            Vector3 targetMovementVelocity = reorientedInput * _characterSpeed;
             currentVelocity = 
                 Vector3.Lerp(
                     currentVelocity, 
                     targetMovementVelocity, 
                     1f - Mathf.Exp(-stableMovementSharpness * deltaTime));
+
+            if (_resetJumps) {
+                _timesJumped = 0;
+                _resetJumps = false;
+            }
         } else currentVelocity += gravity * deltaTime;
         
-        if (_jumped) { // Set Multijump Later
-            currentVelocity += (motor.CharacterUp * jumpSpeed) - Vector3.Project(currentVelocity, motor.CharacterUp);
+        if (_jumped) {
+            Vector3 groundNormal = motor.GroundingStatus.GroundNormal;
+
+            Vector3 inputRight = Vector3.Cross(_moveInputVector, motor.CharacterUp);
+            Vector3 reorientedInput = Vector3.Cross(groundNormal, inputRight).normalized;
+
+            Vector3 targetMovementVelocity = reorientedInput * _characterSpeed;
+            Vector3 targetMovementDirection = (motor.CharacterUp * jumpSpeed) - Vector3.Project(currentVelocity, motor.CharacterUp) + targetMovementVelocity;
+            
+            currentVelocity = Vector3.Lerp(currentVelocity, targetMovementDirection, 1f - Mathf.Exp(-stableMovementSharpness * deltaTime));
+            
             _jumped = false;
+            if (_timesJumped < _jumpLimit) _timesJumped++;
+            
             motor.ForceUnground();
         }
     }

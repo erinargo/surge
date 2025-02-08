@@ -1048,10 +1048,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   motor: {fileID: 2141535276}
   maxStableMovementSpeed: 10
+  maxStableSprintSpeed: 15
+  maxStableCrouchSpeed: 5
   stableMovementSharpness: 15
   orientationSharpness: 10
   jumpSpeed: 10
+  _jumpLimit: 3
   gravity: {x: 0, y: -30, z: 0}
+  _characterSpeed: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
